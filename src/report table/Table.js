@@ -226,7 +226,7 @@ export default function WorkflowRunsTable() {
                     <button
                       onClick={() =>
                         window.open(
-                          `https://report-backend-iyfl.onrender.com/authenticate/${coverageReportId}`,
+                          `http://report-backend-iyfl.onrender.com/authenticate/${coverageReportId}`,
                           "_blank"
                         )
                       }

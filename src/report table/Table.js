@@ -195,13 +195,12 @@ export default function WorkflowRunsTable() {
                 <td>{data.runId}</td>
                 <td>{data.TimeStamp}</td>
                 <td>
-                  <a
-                    href={data.buildLog}
-                    target="_blank"
+                  <button
+                    onClick={()=> window.open(data.buildLog, "_blank")}
                     rel="noopener noreferrer"
                   >
                     View
-                  </a>
+                  </button>
                 </td>
                 <td>
                   {testResultsId === "None" ? (
@@ -210,7 +209,7 @@ export default function WorkflowRunsTable() {
                     <button
                       onClick={() =>
                         window.open(
-                          `https://report-backend-iyfl.onrender.com/artifact/test/${testResultsId}`,
+                          `http://localhost:3001/artifact/test/${testResultsId}`,
                           "_blank"
                         )
                       }
@@ -227,7 +226,7 @@ export default function WorkflowRunsTable() {
                     <button
                       onClick={() =>
                         window.open(
-                          `https://report-backend-iyfl.onrender.com/${coverageReportId}`,
+                          `http://localhost:3001/authenticate/${coverageReportId}`,
                           "_blank"
                         )
                       }

@@ -203,7 +203,7 @@ export default function WorkflowRunsTable() {
                     <p>None</p>
                   ) : (
                     <a
-                      href={`http://localhost:3001/artifact/test/${testResultsId}`}
+                      href={`https://report-backend-iyfl.onrender.com/artifact/test/${testResultsId}`}
                     target="_blank" rel="noopener noreferrer">
                       View
                     </a>
@@ -214,7 +214,7 @@ export default function WorkflowRunsTable() {
                     <p>None</p>
                   ) : (
                     <a
-                      href={`http://localhost:3001/${coverageReportId}`}
+                      href={`https://report-backend-iyfl.onrender.com/${coverageReportId}`}
                       target="_blank" rel="noopener noreferrer">
                       View
                     </a>

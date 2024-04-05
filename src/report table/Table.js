@@ -209,7 +209,7 @@ export default function WorkflowRunsTable() {
                     <button
                       onClick={() =>
                         window.open(
-                          `http://localhost:3001/artifact/test/${testResultsId}`,
+                          `https://report-backend-iyfl.onrender.com/artifact/test/${testResultsId}`,
                           "_blank"
                         )
                       }
@@ -226,7 +226,7 @@ export default function WorkflowRunsTable() {
                     <button
                       onClick={() =>
                         window.open(
-                          `http://localhost:3001/authenticate/${coverageReportId}`,
+                          `https://report-backend-iyfl.onrender.com/authenticate/${coverageReportId}`,
                           "_blank"
                         )
                       }

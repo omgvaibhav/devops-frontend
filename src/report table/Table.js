@@ -105,7 +105,7 @@ export default function WorkflowRunsTable() {
           buildLog: run.html_url,
           runId: run.id,
           workflowName: run.name,
-          TimeStamp: run.created_at
+          TimeStamp: run.created_at,
         }))
       );
     } else {
@@ -119,12 +119,11 @@ export default function WorkflowRunsTable() {
           buildLog: run.html_url,
           runId: run.id,
           workflowName: run.name,
-          TimeStamp: run.created_at
+          TimeStamp: run.created_at,
         }))
       );
     }
   };
-  
 
   useEffect(() => {
     handleBranchChange();
@@ -196,28 +195,46 @@ export default function WorkflowRunsTable() {
                 <td>{data.runId}</td>
                 <td>{data.TimeStamp}</td>
                 <td>
-                  <a href={data.buildLog} target="_blank" rel="noopener noreferrer">View</a>
+                  <a
+                    href={data.buildLog}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View
+                  </a>
                 </td>
                 <td>
                   {testResultsId === "None" ? (
                     <p>None</p>
                   ) : (
-                    <a
-                      href={`https://report-backend-iyfl.onrender.com/artifact/test/${testResultsId}`}
-                    target="_blank" rel="noopener noreferrer">
+                    <button
+                      onClick={() =>
+                        window.open(
+                          `https://report-backend-iyfl.onrender.com/artifact/test/${testResultsId}`,
+                          "_blank"
+                        )
+                      }
+                      rel="noopener noreferrer"
+                    >
                       View
-                    </a>
+                    </button>
                   )}
                 </td>
                 <td>
                   {coverageReportId === "None" ? (
                     <p>None</p>
                   ) : (
-                    <a
-                      href={`https://report-backend-iyfl.onrender.com/${coverageReportId}`}
-                      target="_blank" rel="noopener noreferrer">
+                    <button
+                      onClick={() =>
+                        window.open(
+                          `https://report-backend-iyfl.onrender.com/${coverageReportId}`,
+                          "_blank"
+                        )
+                      }
+                      rel="noopener noreferrer"
+                    >
                       View
-                    </a>
+                    </button>
                   )}
                 </td>
               </tr>

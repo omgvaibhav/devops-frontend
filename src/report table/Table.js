@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Octokit } from "octokit";
 import "./Table.css";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCircleCheck,
+  faCircleXmark,
+} from "@fortawesome/free-regular-svg-icons";
+import { getAccessToken } from "../login/auth";
+import axios from "axios";
 
 const owner = "D2RTECHDEV";
 const repo = "ONDC-SellerApp";
@@ -13,6 +20,9 @@ export default function WorkflowRunsTable() {
   const [selectedBranch, setSelectedBranch] = useState("All");
   const [workflowRuns, setWorkflowRuns] = useState([]);
   const [artifactInfo, setArtifactInfo] = useState([]);
+
+  // const toks = getAccessToken();
+  // console.log(toks);
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -63,8 +73,8 @@ export default function WorkflowRunsTable() {
       )
     );
 
-    console.log(branch_name);
-    console.log(runsResponse);
+    console.log(`selected branch: ${branch_name}`);
+    //console.log(runsResponse);
     const runs = runsResponse.flatMap((res) => res.data.workflow_runs);
 
     const artifactResponse = await Promise.all(
@@ -94,18 +104,21 @@ export default function WorkflowRunsTable() {
       })),
     }));
 
-    console.log(artifacts);
+    //console.log(artifacts);
     setArtifactInfo(artifacts);
+
     if (branch_name === "All") {
       //console.log(runs);
       setWorkflowRuns(
         runs.map((run) => ({
           project: run.head_repository.name,
           branchName: run.head_branch,
+          user: run.actor.login,
+          conclusion: run.conclusion,
           buildLog: run.html_url,
           runId: run.id,
           workflowName: run.name,
-          TimeStamp: run.created_at,
+          TimeStamp: formatUnixTimestamp(run.created_at),
         }))
       );
     } else {
@@ -116,18 +129,54 @@ export default function WorkflowRunsTable() {
         workflow_runs.map((run) => ({
           project: run.head_repository.name,
           branchName: run.head_branch,
+          user: run.actor.login,
+          conclusion: run.conclusion,
           buildLog: run.html_url,
           runId: run.id,
           workflowName: run.name,
-          TimeStamp: run.created_at,
+          TimeStamp: formatUnixTimestamp(run.created_at),
         }))
       );
     }
   };
 
+  function formatUnixTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    const options = {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    };
+    return date.toLocaleDateString("en-US", options);
+  }
+
   useEffect(() => {
     handleBranchChange();
   }, [selectedBranch]);
+
+  const handleArtifact = async (id) => {
+    try {
+      const token = getAccessToken();
+      const response = await axios.get(`http://localhost:3001/${id}`, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          Authorization: 'Bearer ' + token,
+        },
+        maxRedirects: 0,
+      });
+      if(response.status === 200){
+        const redirect = response.data.URL
+        console.log(redirect);
+        window.open(redirect, "_blank");
+      }
+    } catch (e) {
+      alert("Unauthorized");
+      console.error(`error in making api call:\n${e}`);
+    }
+  };
 
   // useEffect(() => {
   //   console.log(workflowRuns);
@@ -154,8 +203,10 @@ export default function WorkflowRunsTable() {
           <tr>
             <th>Project Name</th>
             <th>Branch</th>
+            <th>User</th>
             <th>Workflow</th>
             <th>Run ID</th>
+            <th>Status</th>
             <th>Time Stamp</th>
             <th>Build Log</th>
             <th>Test Log</th>
@@ -191,12 +242,30 @@ export default function WorkflowRunsTable() {
               <tr key={data.runId}>
                 <td>{data.project}</td>
                 <td>{data.branchName}</td>
+                <td>{data.user}</td>
                 <td>{data.workflowName}</td>
                 <td>{data.runId}</td>
+                <td>
+                  {data.conclusion === "success" ? (
+                    <FontAwesomeIcon
+                      icon={faCircleCheck}
+                      size="lg"
+                      style={{ marginLeft: "15px", color: "#55a654" }}
+                    />
+                  ) : data.conclusion === "failure" ? (
+                    <FontAwesomeIcon
+                      icon={faCircleXmark}
+                      size="lg"
+                      style={{ marginLeft: "15px", color: "#d61f1f" }}
+                    />
+                  ) : (
+                    <span>{data.conclusion}</span> // Display data.conclusion if neither condition is met
+                  )}
+                </td>
                 <td>{data.TimeStamp}</td>
                 <td>
                   <button
-                    onClick={()=> window.open(data.buildLog, "_blank")}
+                    onClick={() => window.open(data.buildLog, "_blank")}
                     rel="noopener noreferrer"
                   >
                     View
@@ -208,12 +277,8 @@ export default function WorkflowRunsTable() {
                   ) : (
                     <button
                       onClick={() =>
-                        window.open(
-                          `https://report-backend-iyfl.onrender.com/artifact/test/${testResultsId}`,
-                          "_blank"
-                        )
+                        handleArtifact(`artifact/test/${testResultsId}`)
                       }
-                      rel="noopener noreferrer"
                     >
                       View
                     </button>
@@ -225,12 +290,8 @@ export default function WorkflowRunsTable() {
                   ) : (
                     <button
                       onClick={() =>
-                        window.open(
-                          `http://report-backend-iyfl.onrender.com/authenticate/${coverageReportId}`,
-                          "_blank"
-                        )
+                        handleArtifact(`artifact/coverage/${coverageReportId}`)
                       }
-                      rel="noopener noreferrer"
                     >
                       View
                     </button>

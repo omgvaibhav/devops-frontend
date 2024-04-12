@@ -12,6 +12,10 @@ function App() {
     }
   }, []);
 
+  function loginWithGitHub(){
+    window.location.assign("https://github.com/login/oauth/authorize?client_id=00454ee01e983c133293")
+  }
+
   const logout = () => {
     localStorage.removeItem("accessToken");
     setIsLoggedIn(false);

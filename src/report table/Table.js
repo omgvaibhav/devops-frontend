@@ -23,6 +23,7 @@ export default function WorkflowRunsTable() {
 
   // const toks = getAccessToken();
   // console.log(toks);
+  const apiUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -76,7 +77,7 @@ export default function WorkflowRunsTable() {
     console.log(`selected branch: ${branch_name}`);
     //console.log(runsResponse);
     const runs = runsResponse.flatMap((res) => res.data.workflow_runs);
-
+    //console.log(runs);
     const artifactResponse = await Promise.all(
       runs.map((run) =>
         octokit.request(
@@ -160,7 +161,7 @@ export default function WorkflowRunsTable() {
   const handleArtifact = async (id) => {
     try {
       const token = getAccessToken();
-      const response = await axios.get(`http://localhost:3001/${id}`, {
+      const response = await axios.get(`${apiUrl}/${id}`, {
         headers: {
           "Access-Control-Allow-Origin": "*",
           Authorization: 'Bearer ' + token,
@@ -258,9 +259,9 @@ export default function WorkflowRunsTable() {
                       size="lg"
                       style={{ marginLeft: "15px", color: "#d61f1f" }}
                     />
-                  ) : (
-                    <span>{data.conclusion}</span> // Display data.conclusion if neither condition is met
-                  )}
+                  ) : data.conclusion == null ?(<span>Queued</span>):
+                    (<span>{data.conclusion}</span>// Display data.conclusion if neither condition is met
+                  ) }
                 </td>
                 <td>{data.TimeStamp}</td>
                 <td>

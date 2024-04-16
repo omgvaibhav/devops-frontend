@@ -13,6 +13,12 @@ export default function LoginPage() {
     }
   }, []);
 
+  // function loginWithGitHub() {
+  //   window.location.assign(
+  //     "https://github.com/login/oauth/authorize?client_id=00454ee01e983c133293"
+  //   );
+  // }
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
@@ -23,7 +29,7 @@ export default function LoginPage() {
         window.location.reload();
       }
     } catch (error) {
-        alert("login failed");
+      alert("login failed");
       console.error("Login failed", error);
     }
   };
@@ -31,6 +37,7 @@ export default function LoginPage() {
   return (
     <>
       <form className="loginform" onSubmit={handleSubmit}>
+        {/* <button type="submit">log in with GitHub</button> */}
         <h2>Login</h2>
         <label htmlFor="useranme">Username</label>
         <input

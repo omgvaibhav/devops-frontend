@@ -6,8 +6,9 @@ import {
   faCircleCheck,
   faCircleXmark,
 } from "@fortawesome/free-regular-svg-icons";
-import { getAccessToken } from "../login/auth";
+import { getAccessToken, getAdmin } from "../login/auth";
 import axios from "axios";
+import JSZip from "jszip";
 
 const owner = "D2RTECHDEV";
 const repo = "ONDC-SellerApp";
@@ -15,15 +16,19 @@ const pat = "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";
 
 const octokit = new Octokit({ auth: pat });
 
-export default function WorkflowRunsTable() {
+export default function WorkflowRunsTable(props) {
   const [branches, setBranches] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState("All");
   const [workflowRuns, setWorkflowRuns] = useState([]);
   const [artifactInfo, setArtifactInfo] = useState([]);
+  const [passRates, setPassRates] = useState({});
 
   // const toks = getAccessToken();
   // console.log(toks);
+  //console.log(isAdmin);
   const apiUrl = process.env.REACT_APP_API_BASE_URL;
+  const isAdmin = getAdmin();
+  //console.log(isAdmin);
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -39,9 +44,12 @@ export default function WorkflowRunsTable() {
       );
       setBranches(response.data.map((branch) => branch.name));
     };
-
     fetchBranches();
   }, []);
+
+  useEffect(() => {
+    handleBranchChange();
+  }, [selectedBranch]);
 
   const handleBranchChange = async () => {
     const branch_name = selectedBranch;
@@ -77,7 +85,9 @@ export default function WorkflowRunsTable() {
     console.log(`selected branch: ${branch_name}`);
     //console.log(runsResponse);
     const runs = runsResponse.flatMap((res) => res.data.workflow_runs);
-    //console.log(runs);
+    //onsole.log(runs);
+    const firstRunId = runs[0]?.id;
+    //console.log(firstRunId);
     const artifactResponse = await Promise.all(
       runs.map((run) =>
         octokit.request(
@@ -94,6 +104,43 @@ export default function WorkflowRunsTable() {
       )
     );
     //console.log(artifactResponse);
+
+    const fetchPassRateArtifact = await octokit.request('GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts', {
+      owner: owner,
+      repo: repo,
+      run_id: firstRunId,
+      headers: {
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    });
+
+    //console.log(fetchPassRateArtifact.data);
+    const rateArtifact = fetchPassRateArtifact.data.artifacts.filter(artifact => artifact.name === 'test-pass-rates');
+    //console.log(rateArtifact);
+    const passRateId = rateArtifact[0]?.id;
+    //console.log(passRateId);
+
+    octokit.request('GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/{archive_format}', {
+      owner: owner,
+      repo: repo,
+      artifact_id: passRateId,
+      archive_format: 'zip',
+      headers: {
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    }).then(async res => {
+      const zipData = res.data;
+      const zip = new JSZip();
+      zip.loadAsync(zipData).then(zip =>{
+        return zip.file('test-pass-rates.json').async('uint8array');
+      }).then(uint8Array => {
+        const jsonContent = new TextDecoder().decode(uint8Array);
+        const data = JSON.parse(jsonContent);
+        setPassRates(data);
+      }).catch(e => console.error(e));
+    }).catch(e=>console.error(e));
+
+    //console.log(passRates);
 
     const artifacts = artifactResponse.map((res) => ({
       count: res.data.total_count,
@@ -154,10 +201,6 @@ export default function WorkflowRunsTable() {
     return date.toLocaleDateString("en-US", options);
   }
 
-  useEffect(() => {
-    handleBranchChange();
-  }, [selectedBranch]);
-
   const handleArtifact = async (id) => {
     try {
       const token = getAccessToken();
@@ -170,7 +213,7 @@ export default function WorkflowRunsTable() {
       });
       if(response.status === 200){
         const redirect = response.data.URL
-        console.log(redirect);
+        //console.log(redirect);
         window.open(redirect, "_blank");
       }
     } catch (e) {
@@ -204,7 +247,7 @@ export default function WorkflowRunsTable() {
           <tr>
             <th>Project Name</th>
             <th>Branch</th>
-            <th>User</th>
+            {isAdmin && (<th>User</th>)}
             <th>Workflow</th>
             <th>Run ID</th>
             <th>Status</th>
@@ -243,7 +286,7 @@ export default function WorkflowRunsTable() {
               <tr key={data.runId}>
                 <td>{data.project}</td>
                 <td>{data.branchName}</td>
-                <td>{data.user}</td>
+                {isAdmin && (<td>{data.user}</td>)}
                 <td>{data.workflowName}</td>
                 <td>{data.runId}</td>
                 <td>
@@ -265,7 +308,7 @@ export default function WorkflowRunsTable() {
                 </td>
                 <td>{data.TimeStamp}</td>
                 <td>
-                  <button
+                  <button disabled={!isAdmin}
                     onClick={() => window.open(data.buildLog, "_blank")}
                     rel="noopener noreferrer"
                   >
@@ -276,7 +319,7 @@ export default function WorkflowRunsTable() {
                   {testResultsId === "None" ? (
                     <p>None</p>
                   ) : (
-                    <button
+                    <button disabled={!isAdmin}
                       onClick={() =>
                         handleArtifact(`artifact/test/${testResultsId}`)
                       }
@@ -284,12 +327,13 @@ export default function WorkflowRunsTable() {
                       View
                     </button>
                   )}
+                  {passRates[data.runId]}
                 </td>
                 <td>
                   {coverageReportId === "None" ? (
                     <p>None</p>
                   ) : (
-                    <button
+                    <button disabled={!isAdmin}
                       onClick={() =>
                         handleArtifact(`artifact/coverage/${coverageReportId}`)
                       }

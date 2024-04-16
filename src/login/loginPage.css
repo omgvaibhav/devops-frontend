@@ -35,6 +35,7 @@
     background-color: #007bff;
     color: white;
     cursor: pointer;
+    font-size: medium;
    }
    
    .loginform button:hover {

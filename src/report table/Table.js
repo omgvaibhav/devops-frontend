@@ -223,8 +223,7 @@ export default function WorkflowRunsTable() {
         headers: {
           "Access-Control-Allow-Origin": "*",
           Authorization: "Bearer " + token,
-        },
-        maxRedirects: 0,
+        }
       });
       if (response.status === 200) {
         const redirect = response.data.URL;

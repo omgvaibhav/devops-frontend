@@ -16,7 +16,7 @@ const pat = "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";
 
 const octokit = new Octokit({ auth: pat });
 
-export default function WorkflowRunsTable(props) {
+export default function WorkflowRunsTable() {
   const [branches, setBranches] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState("All");
   const [workflowRuns, setWorkflowRuns] = useState([]);
@@ -105,40 +105,55 @@ export default function WorkflowRunsTable(props) {
     );
     //console.log(artifactResponse);
 
-    const fetchPassRateArtifact = await octokit.request('GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts', {
-      owner: owner,
-      repo: repo,
-      run_id: firstRunId,
-      headers: {
-        'X-GitHub-Api-Version': '2022-11-28'
+    const fetchPassRateArtifact = await octokit.request(
+      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts",
+      {
+        owner: owner,
+        repo: repo,
+        run_id: firstRunId,
+        headers: {
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
       }
-    });
+    );
 
     //console.log(fetchPassRateArtifact.data);
-    const rateArtifact = fetchPassRateArtifact.data.artifacts.filter(artifact => artifact.name === 'test-pass-rates');
+    const rateArtifact = fetchPassRateArtifact.data.artifacts.filter(
+      (artifact) => artifact.name === "test-pass-rates"
+    );
     //console.log(rateArtifact);
     const passRateId = rateArtifact[0]?.id;
     //console.log(passRateId);
 
-    octokit.request('GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/{archive_format}', {
-      owner: owner,
-      repo: repo,
-      artifact_id: passRateId,
-      archive_format: 'zip',
-      headers: {
-        'X-GitHub-Api-Version': '2022-11-28'
-      }
-    }).then(async res => {
-      const zipData = res.data;
-      const zip = new JSZip();
-      zip.loadAsync(zipData).then(zip =>{
-        return zip.file('test-pass-rates.json').async('uint8array');
-      }).then(uint8Array => {
-        const jsonContent = new TextDecoder().decode(uint8Array);
-        const data = JSON.parse(jsonContent);
-        setPassRates(data);
-      }).catch(e => console.error(e));
-    }).catch(e=>console.error(e));
+    octokit
+      .request(
+        "GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/{archive_format}",
+        {
+          owner: owner,
+          repo: repo,
+          artifact_id: passRateId,
+          archive_format: "zip",
+          headers: {
+            "X-GitHub-Api-Version": "2022-11-28",
+          },
+        }
+      )
+      .then(async (res) => {
+        const zipData = res.data;
+        const zip = new JSZip();
+        zip
+          .loadAsync(zipData)
+          .then((zip) => {
+            return zip.file("test-pass-rates.json").async("uint8array");
+          })
+          .then((uint8Array) => {
+            const jsonContent = new TextDecoder().decode(uint8Array);
+            const data = JSON.parse(jsonContent);
+            setPassRates(data);
+          })
+          .catch((e) => console.error(e));
+      })
+      .catch((e) => console.error(e));
 
     //console.log(passRates);
 
@@ -207,12 +222,12 @@ export default function WorkflowRunsTable(props) {
       const response = await axios.get(`${apiUrl}/${id}`, {
         headers: {
           "Access-Control-Allow-Origin": "*",
-          Authorization: 'Bearer ' + token,
+          Authorization: "Bearer " + token,
         },
         maxRedirects: 0,
       });
-      if(response.status === 200){
-        const redirect = response.data.URL
+      if (response.status === 200) {
+        const redirect = response.data.URL;
         //console.log(redirect);
         window.open(redirect, "_blank");
       }
@@ -221,6 +236,16 @@ export default function WorkflowRunsTable(props) {
       console.error(`error in making api call:\n${e}`);
     }
   };
+
+  function getPassRateColor(passRate) {
+    if (passRate === undefined || passRate === null) {
+      return 'black';
+    } else if (passRate < 90) {
+      return 'red';
+    } else {
+      return 'green';
+    }
+  }
 
   // useEffect(() => {
   //   console.log(workflowRuns);
@@ -247,12 +272,13 @@ export default function WorkflowRunsTable(props) {
           <tr>
             <th>Project Name</th>
             <th>Branch</th>
-            {isAdmin && (<th>User</th>)}
+            {isAdmin && <th>User</th>}
             <th>Workflow</th>
             <th>Run ID</th>
             <th>Status</th>
             <th>Time Stamp</th>
             <th>Build Log</th>
+            <th>Test pass rate</th>
             <th>Test Log</th>
             <th>Coverage Report</th>
           </tr>
@@ -286,7 +312,7 @@ export default function WorkflowRunsTable(props) {
               <tr key={data.runId}>
                 <td>{data.project}</td>
                 <td>{data.branchName}</td>
-                {isAdmin && (<td>{data.user}</td>)}
+                {isAdmin && <td>{data.user}</td>}
                 <td>{data.workflowName}</td>
                 <td>{data.runId}</td>
                 <td>
@@ -302,24 +328,32 @@ export default function WorkflowRunsTable(props) {
                       size="lg"
                       style={{ marginLeft: "15px", color: "#d61f1f" }}
                     />
-                  ) : data.conclusion == null ?(<span>Queued</span>):
-                    (<span>{data.conclusion}</span>// Display data.conclusion if neither condition is met
-                  ) }
+                  ) : data.conclusion == null ? (
+                    <span>Queued</span>
+                  ) : (
+                    <span>{data.conclusion}</span> // Display data.conclusion if neither condition is met
+                  )}
                 </td>
                 <td>{data.TimeStamp}</td>
                 <td>
-                  <button disabled={!isAdmin}
+                  <button
+                    disabled={!isAdmin}
                     onClick={() => window.open(data.buildLog, "_blank")}
                     rel="noopener noreferrer"
                   >
                     View
                   </button>
                 </td>
+                <td
+                  style={{ color: getPassRateColor(passRates[data.runId])}}>
+                  {passRates[data.runId]!==undefined  ? `${passRates[data.runId]} %` : "N/A"}
+                </td>
                 <td>
                   {testResultsId === "None" ? (
                     <p>None</p>
                   ) : (
-                    <button disabled={!isAdmin}
+                    <button
+                      disabled={!isAdmin}
                       onClick={() =>
                         handleArtifact(`artifact/test/${testResultsId}`)
                       }
@@ -327,13 +361,13 @@ export default function WorkflowRunsTable(props) {
                       View
                     </button>
                   )}
-                  {passRates[data.runId]}
                 </td>
                 <td>
                   {coverageReportId === "None" ? (
                     <p>None</p>
                   ) : (
-                    <button disabled={!isAdmin}
+                    <button
+                      disabled={!isAdmin}
                       onClick={() =>
                         handleArtifact(`artifact/coverage/${coverageReportId}`)
                       }

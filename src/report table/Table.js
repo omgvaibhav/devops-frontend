@@ -21,14 +21,12 @@ export default function WorkflowRunsTable() {
   const [selectedBranch, setSelectedBranch] = useState("All");
   const [workflowRuns, setWorkflowRuns] = useState([]);
   const [artifactInfo, setArtifactInfo] = useState([]);
-  const [passRates, setPassRates] = useState({});
+  const [allpassRates, setallPassRates] = useState({});
+  var passRates = [];
+  const mergedPassRates = {};
 
-  // const toks = getAccessToken();
-  // console.log(toks);
-  //console.log(isAdmin);
   const apiUrl = process.env.REACT_APP_API_BASE_URL;
   const isAdmin = getAdmin();
-  //console.log(isAdmin);
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -52,26 +50,30 @@ export default function WorkflowRunsTable() {
   }, [selectedBranch]);
 
   const handleBranchChange = async () => {
-    const branch_name = selectedBranch;
-    const response = await octokit.request(
+    const branchName = selectedBranch;
+    console.log(`Selected branch: ${branchName}`);
+
+    // Fetch all the workflows for the repository
+    const workflowsResponse = await octokit.request(
       "GET /repos/{owner}/{repo}/actions/workflows",
       {
-        owner: owner,
-        repo: repo,
+        owner,
+        repo,
         headers: {
           "X-GitHub-Api-Version": "2022-11-28",
         },
       }
     );
+    const workflows = workflowsResponse.data.workflows;
 
-    const workflows = response.data.workflows;
-    const runsResponse = await Promise.all(
+    // Fetch the latest 10 runs for each workflow
+    const workflowRuns = await Promise.all(
       workflows.map((workflow) =>
         octokit.request(
           "GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs",
           {
-            owner: owner,
-            repo: repo,
+            owner,
+            repo,
             workflow_id: workflow.id,
             per_page: 10,
             headers: {
@@ -81,20 +83,17 @@ export default function WorkflowRunsTable() {
         )
       )
     );
+    const allRuns = workflowRuns.flatMap((res) => res.data.workflow_runs);
 
-    console.log(`selected branch: ${branch_name}`);
-    //console.log(runsResponse);
-    const runs = runsResponse.flatMap((res) => res.data.workflow_runs);
-    //onsole.log(runs);
-    const firstRunId = runs[0]?.id;
-    //console.log(firstRunId);
-    const artifactResponse = await Promise.all(
-      runs.map((run) =>
+    // Extract the run IDs for the "test-pass-rates" artifacts
+    //const testRateRunIds = allRuns.map((run) => run.id);
+    const artifactsResponse = await Promise.all(
+      allRuns.map((run) =>
         octokit.request(
           "GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts",
           {
-            owner: owner,
-            repo: repo,
+            owner,
+            repo,
             run_id: run.id,
             headers: {
               "X-GitHub-Api-Version": "2022-11-28",
@@ -103,61 +102,65 @@ export default function WorkflowRunsTable() {
         )
       )
     );
-    //console.log(artifactResponse);
+    const testRateArtifactIds = artifactsResponse
+      .flatMap((res) => res.data.artifacts)
+      .filter((artifact) => artifact.name === "test-pass-rates")
+      .map((artifact) => artifact.id);
 
-    const fetchPassRateArtifact = await octokit.request(
-      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts",
-      {
-        owner: owner,
-        repo: repo,
-        run_id: firstRunId,
-        headers: {
-          "X-GitHub-Api-Version": "2022-11-28",
-        },
-      }
-    );
-
-    //console.log(fetchPassRateArtifact.data);
-    const rateArtifact = fetchPassRateArtifact.data.artifacts.filter(
-      (artifact) => artifact.name === "test-pass-rates"
-    );
-    //console.log(rateArtifact);
-    const passRateId = rateArtifact[0]?.id;
-    //console.log(passRateId);
-
-    octokit
-      .request(
-        "GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/{archive_format}",
-        {
-          owner: owner,
-          repo: repo,
-          artifact_id: passRateId,
-          archive_format: "zip",
-          headers: {
-            "X-GitHub-Api-Version": "2022-11-28",
-          },
-        }
-      )
-      .then(async (res) => {
-        const zipData = res.data;
+    // Fetch the "test-pass-rates" artifacts and parse the JSON content
+    const passRates = await Promise.all(
+      testRateArtifactIds.map(async (artifactId) => {
+        const artifactResponse = await octokit.request(
+          "GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/{archive_format}",
+          {
+            owner,
+            repo,
+            artifact_id: artifactId,
+            archive_format: "zip",
+            headers: {
+              "X-GitHub-Api-Version": "2022-11-28",
+            },
+          }
+        );
+        const zipData = artifactResponse.data;
         const zip = new JSZip();
-        zip
-          .loadAsync(zipData)
-          .then((zip) => {
-            return zip.file("test-pass-rates.json").async("uint8array");
-          })
-          .then((uint8Array) => {
-            const jsonContent = new TextDecoder().decode(uint8Array);
-            const data = JSON.parse(jsonContent);
-            setPassRates(data);
-          })
-          .catch((e) => console.error(e));
+        await zip.loadAsync(zipData);
+        const jsonContent = await zip
+          .file("test-pass-rates.json")
+          .async("string");
+        return JSON.parse(jsonContent);
       })
-      .catch((e) => console.error(e));
+    );
 
-    //console.log(passRates);
+    // Merge the pass rate data into a single object
+    const mergedPassRates = passRates.reduce((acc, obj) => {
+      const [key, value] = Object.entries(obj)[0];
+      acc[key] = value;
+      return acc;
+    }, {});
+    setallPassRates(mergedPassRates);
+    //console.log(allpassRates);
 
-    const artifacts = artifactResponse.map((res) => ({
+    // Filter the workflow runs based on the selected branch
+    const filteredRuns =
+      branchName === "All"
+        ? allRuns
+        : allRuns.filter((run) => run.head_branch === branchName);
+    setWorkflowRuns(
+      filteredRuns.map((run) => ({
+        project: run.head_repository.name,
+        branchName: run.head_branch,
+        user: run.actor.login,
+        conclusion: run.conclusion,
+        buildLog: run.html_url,
+        runId: run.id,
+        workflowName: run.name,
+        timestamp: formatUnixTimestamp(run.created_at),
+      }))
+    );
+
+    // Extract the artifact information
+    const artifacts = artifactsResponse.map((res) => ({
       count: res.data.total_count,
       artifact: res.data.artifacts.map((data) => ({
         name: data.name,
@@ -166,41 +169,7 @@ export default function WorkflowRunsTable() {
         branch: data.workflow_run.head_branch,
       })),
     }));
-
-    //console.log(artifacts);
     setArtifactInfo(artifacts);
-
-    if (branch_name === "All") {
-      //console.log(runs);
-      setWorkflowRuns(
-        runs.map((run) => ({
-          project: run.head_repository.name,
-          branchName: run.head_branch,
-          user: run.actor.login,
-          conclusion: run.conclusion,
-          buildLog: run.html_url,
-          runId: run.id,
-          workflowName: run.name,
-          TimeStamp: formatUnixTimestamp(run.created_at),
-        }))
-      );
-    } else {
-      const workflow_runs = runs.filter(
-        (run) => run.head_branch === branch_name
-      );
-      setWorkflowRuns(
-        workflow_runs.map((run) => ({
-          project: run.head_repository.name,
-          branchName: run.head_branch,
-          user: run.actor.login,
-          conclusion: run.conclusion,
-          buildLog: run.html_url,
-          runId: run.id,
-          workflowName: run.name,
-          TimeStamp: formatUnixTimestamp(run.created_at),
-        }))
-      );
-    }
   };
 
   function formatUnixTimestamp(timestamp) {
@@ -213,6 +182,7 @@ export default function WorkflowRunsTable() {
       minute: "numeric",
       hour12: true,
     };
+    //console.log(options);
     return date.toLocaleDateString("en-US", options);
   }
 
@@ -223,7 +193,7 @@ export default function WorkflowRunsTable() {
         headers: {
           "Access-Control-Allow-Origin": "*",
           Authorization: "Bearer " + token,
-        }
+        },
       });
       if (response.status === 200) {
         const redirect = response.data.URL;
@@ -238,17 +208,13 @@ export default function WorkflowRunsTable() {
 
   function getPassRateColor(passRate) {
     if (passRate === undefined || passRate === null) {
-      return 'black';
+      return "black";
     } else if (passRate < 90) {
-      return 'red';
+      return "red";
     } else {
-      return 'green';
+      return "green";
     }
   }
-
-  // useEffect(() => {
-  //   console.log(workflowRuns);
-  // }, [workflowRuns]);
 
   return (
     <div>
@@ -333,7 +299,7 @@ export default function WorkflowRunsTable() {
                     <span>{data.conclusion}</span> // Display data.conclusion if neither condition is met
                   )}
                 </td>
-                <td>{data.TimeStamp}</td>
+                <td>{data.timestamp}</td>
                 <td>
                   <button
                     disabled={!isAdmin}
@@ -344,8 +310,9 @@ export default function WorkflowRunsTable() {
                   </button>
                 </td>
                 <td
-                  style={{ color: getPassRateColor(passRates[data.runId])}}>
-                  {passRates[data.runId]!==undefined  ? `${passRates[data.runId]} %` : "N/A"}
+                  style={{ color: getPassRateColor(allpassRates[data.runId]) }}
+                >
+                  {allpassRates[data.runId] ? allpassRates[data.runId] : "N/A"}
                 </td>
                 <td>
                   {testResultsId === "None" ? (

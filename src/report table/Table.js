@@ -312,7 +312,7 @@ export default function WorkflowRunsTable() {
                 <td
                   style={{ color: getPassRateColor(allpassRates[data.runId]) }}
                 >
-                  {allpassRates[data.runId] ? allpassRates[data.runId] : "N/A"}
+                  {allpassRates[data.runId] ? `${allpassRates[data.runId]} %` : "N/A"}
                 </td>
                 <td>
                   {testResultsId === "None" ? (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Octokit } from "octokit";
+import { Octokit, App } from "octokit";
 import "./Table.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -22,10 +22,8 @@ export default function WorkflowRunsTable() {
   const [workflowRuns, setWorkflowRuns] = useState([]);
   const [artifactInfo, setArtifactInfo] = useState([]);
   const [allpassRates, setallPassRates] = useState({});
-  var passRates = [];
-  const mergedPassRates = {};
 
-  const apiUrl = process.env.REACT_APP_API_BASE_URL;
+  const apiUrl = import.meta.env.VITE_APP_API_BASE_URL;
   const isAdmin = getAdmin();
 
   useEffect(() => {

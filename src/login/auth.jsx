@@ -2,7 +2,7 @@ import axios from "axios";
 
 export async function login(codeParam) {
   try {
-    const apiUrl = process.env.REACT_APP_API_BASE_URL;
+    const apiUrl = import.meta.env.VITE_APP_API_BASE_URL;
     const response = await axios.get(`${apiUrl}/login?code=${codeParam}`);
     //console.log(response.data);
     localStorage.setItem("accessToken", response.data.token);

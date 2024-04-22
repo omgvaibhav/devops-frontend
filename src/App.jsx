@@ -10,7 +10,7 @@ function App() {
     const storedToken = getAccessToken();
     const storedAdmin = getAdmin();
     if (storedToken) {
-      // setIsLoggedIn(true);
+      setIsLoggedIn(true);
       console.log("Logged in");
       console.log(`admin: ${storedAdmin}`);
     }
@@ -24,10 +24,10 @@ function App() {
         try {
           const { accessToken } = await login(codeParam);
           //console.log(accessToken.token);
-          if(accessToken) {
+          if (accessToken) {
             alert("login successful!");
             window.location.reload();
-          };
+          }
         } catch (error) {
           console.error("Login failed", error);
         }
@@ -41,7 +41,9 @@ function App() {
     event.preventDefault();
     try {
       window.location.assign(
-        `https://github.com/login/oauth/authorize?client_id=${import.meta.env.VITE_APP_CLIENT_ID}`
+        `https://github.com/login/oauth/authorize?client_id=${
+          import.meta.env.VITE_APP_CLIENT_ID
+        }`
       );
     } catch (error) {
       alert("login failed");
@@ -70,7 +72,7 @@ function App() {
               backgroundColor: "#007bff",
               color: "white",
               cursor: "pointer",
-              marginBottom: "10px"
+              marginBottom: "10px",
             }}
             onClick={logOut}
           >

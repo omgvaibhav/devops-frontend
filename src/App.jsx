@@ -10,7 +10,7 @@ function App() {
     const storedToken = getAccessToken();
     const storedAdmin = getAdmin();
     if (storedToken) {
-      // setIsLoggedIn(true);
+      setIsLoggedIn(true);
       console.log("Logged in");
       console.log(`admin: ${storedAdmin}`);
     }
@@ -19,7 +19,7 @@ function App() {
     const codeParam = params.get("code");
     //console.log(`code: ${codeParam}`);
     if (codeParam && localStorage.getItem("accessToken") === null) {
-      setIsLoggedIn(true);
+      //setIsLoggedIn(true);
       const handleLogin = async () => {
         try {
           const { accessToken } = await login(codeParam);
